@@ -4,8 +4,20 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Bold,
+  Italic,
+  Underline,
+  Link,
+  Image,
+  Type,
+  ListOrdered,
+  ListMinus,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 
 const CreateArticle = () => {
   const [title, setTitle] = useState("");
@@ -44,55 +56,166 @@ const CreateArticle = () => {
     }
   };
 
+  const formatSelection = (tag: string) => {
+    const textarea = document.getElementById("content") as HTMLTextAreaElement;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.substring(start, end);
+    const beforeText = content.substring(0, start);
+    const afterText = content.substring(end);
+
+    setContent(`${beforeText}<${tag}>${selectedText}</${tag}>${afterText}`);
+  };
+
+  const insertLink = () => {
+    const url = prompt("Enter URL:");
+    if (url) {
+      const textarea = document.getElementById("content") as HTMLTextAreaElement;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selectedText = content.substring(start, end);
+      const beforeText = content.substring(0, start);
+      const afterText = content.substring(end);
+
+      setContent(
+        `${beforeText}<a href="${url}">${selectedText || url}</a>${afterText}`
+      );
+    }
+  };
+
+  const insertImage = () => {
+    const url = prompt("Enter image URL:");
+    if (url) {
+      const textarea = document.getElementById("content") as HTMLTextAreaElement;
+      const start = textarea.selectionStart;
+      const beforeText = content.substring(0, start);
+      const afterText = content.substring(start);
+
+      setContent(`${beforeText}<img src="${url}" alt="Image" />${afterText}`);
+    }
+  };
+
   return (
-    <div className="container max-w-4xl py-8">
-      <h1 className="text-3xl font-bold mb-8">Create New Article</h1>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <Input
-            placeholder="Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Input
-            placeholder="Category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Textarea
-            placeholder="Abstract"
-            value={abstract}
-            onChange={(e) => setAbstract(e.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Textarea
-            placeholder="Content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            required
-            className="min-h-[200px]"
-          />
-        </div>
-        <div className="space-y-2">
-          <Input
-            placeholder="Thumbnail URL"
-            value={thumbnailUrl}
-            onChange={(e) => setThumbnailUrl(e.target.value)}
-            required
-          />
-        </div>
-        <Button type="submit" disabled={loading}>
-          {loading ? "Creating..." : "Create Article"}
-        </Button>
-      </form>
+    <div className="min-h-screen">
+      <Header />
+      <main className="container max-w-4xl py-8">
+        <h1 className="text-3xl font-bold mb-8">Create New Article</h1>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Input
+              placeholder="Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              className="text-xl font-bold"
+            />
+          </div>
+          <div className="space-y-2">
+            <Input
+              placeholder="Category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Abstract"
+              value={abstract}
+              onChange={(e) => setAbstract(e.target.value)}
+              required
+            />
+          </div>
+          <div className="border rounded-lg p-2 space-y-2">
+            <div className="flex gap-2 border-b pb-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => formatSelection("b")}
+              >
+                <Bold className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => formatSelection("i")}
+              >
+                <Italic className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => formatSelection("u")}
+              >
+                <Underline className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={insertLink}
+              >
+                <Link className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={insertImage}
+              >
+                <Image className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => formatSelection("h2")}
+              >
+                <Type className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => formatSelection("ol")}
+              >
+                <ListOrdered className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => formatSelection("ul")}
+              >
+                <ListMinus className="h-4 w-4" />
+              </Button>
+            </div>
+            <Textarea
+              id="content"
+              placeholder="Write your article content here..."
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              required
+              className="min-h-[400px]"
+            />
+          </div>
+          <div className="space-y-2">
+            <Input
+              placeholder="Thumbnail URL"
+              value={thumbnailUrl}
+              onChange={(e) => setThumbnailUrl(e.target.value)}
+              required
+            />
+          </div>
+          <Button type="submit" disabled={loading}>
+            {loading ? "Creating..." : "Create Article"}
+          </Button>
+        </form>
+      </main>
+      <Footer />
     </div>
   );
 };
