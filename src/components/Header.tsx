@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Menu, Search, Sun, Moon, User } from "lucide-react";
+import { Menu, Search, Sun, Moon, User, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -35,7 +35,7 @@ const categories = [
 export const Header = () => {
   const navigate = useNavigate();
   const [user, setUser] = React.useState(null);
-  const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { theme, setTheme } = useTheme();
 
   React.useEffect(() => {
@@ -59,6 +59,12 @@ export const Header = () => {
     }
   };
 
+  const handleSearch = (query: string) => {
+    if (query.trim()) {
+      navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+    }
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-12 items-center justify-between">
@@ -74,15 +80,18 @@ export const Header = () => {
                 <SheetTitle className="text-left">Menu</SheetTitle>
               </SheetHeader>
               <div className="px-2 py-4">
-                <Input 
-                  placeholder="Search articles..."
-                  className="mb-4"
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      navigate(`/search?q=${e.target.value}`);
-                    }
-                  }}
-                />
+                <div className="mb-4">
+                  <Input
+                    placeholder="Search articles..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSearch(searchQuery);
+                      }
+                    }}
+                  />
+                </div>
                 <div className="space-y-1">
                   <Button variant="ghost" className="w-full justify-start" onClick={() => navigate("/")}>
                     Home
@@ -112,29 +121,47 @@ export const Header = () => {
           <a href="/" className="text-xl font-bold transition-transform hover:scale-105">
             Journal<span className="text-primary">Hub</span>
           </a>
+          
+          {/* Desktop Categories Menu */}
+          <div className="hidden md:flex">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="gap-1">
+                  Categories <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {categories.map((category) => (
+                  <DropdownMenuItem
+                    key={category}
+                    onClick={() => navigate(`/category/${category.toLowerCase()}`)}
+                  >
+                    {category}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className={`transition-all duration-300 ${isSearchVisible ? 'w-64' : 'w-0'} overflow-hidden`}>
+        <div className="flex items-center gap-4">
+          <div className="relative w-64 hidden md:block">
             <Input
               placeholder="Search articles..."
-              className="w-full"
-              onChange={(e) => {
-                if (e.target.value) {
-                  navigate(`/search?q=${e.target.value}`);
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch(searchQuery);
                 }
               }}
+              className="pr-8"
+            />
+            <Search 
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+              onClick={() => handleSearch(searchQuery)}
             />
           </div>
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            className="transition-transform hover:scale-105"
-            onClick={() => setIsSearchVisible(!isSearchVisible)}
-          >
-            <Search className="h-5 w-5" />
-          </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

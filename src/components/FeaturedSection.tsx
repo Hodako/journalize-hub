@@ -39,33 +39,28 @@ export const FeaturedSection = () => {
   return (
     <section className="py-20">
       <div className="container">
-        <div className="flex flex-col gap-8">
-          <h2 className="text-3xl font-bold animate-fade-down">
-            Featured Articles
-          </h2>
+        <div className="article-grid animate-fade-up">
           {loading ? (
             <p>Loading articles...</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-up">
-              {articles.map((article, index) => (
-                <div
-                  key={article.id}
-                  className="transition-all duration-300"
-                  style={{
-                    animationDelay: `${index * 0.1}s`,
-                  }}
-                >
-                  <ArticleCard
-                    id={article.id}
-                    title={article.title}
-                    abstract={article.abstract || ""}
-                    thumbnail={article.thumbnail_url}
-                    category={article.category}
-                    author={article.author_id}
-                  />
-                </div>
-              ))}
-            </div>
+            articles.map((article, index) => (
+              <div
+                key={article.id}
+                className="transition-all duration-300"
+                style={{
+                  animationDelay: `${index * 0.1}s`,
+                }}
+              >
+                <ArticleCard
+                  id={article.id}
+                  title={article.title}
+                  abstract={article.abstract || ""}
+                  thumbnail={article.thumbnail_url}
+                  category={article.category}
+                  author={article.author_id}
+                />
+              </div>
+            ))
           )}
         </div>
       </div>
