@@ -10,6 +10,7 @@ import { toast } from "sonner";
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const navigate = useNavigate();
@@ -28,11 +29,28 @@ const Auth = () => {
         toast.success("Successfully signed in!");
         navigate("/");
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              full_name: fullName,
+            },
+          },
         });
-        if (error) throw error;
+        if (signUpError) throw signUpError;
+        
+        // Update the profiles table with the user's full name
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ username: fullName })
+            .eq('id', user.id);
+          
+          if (profileError) throw profileError;
+        }
+        
         toast.success("Registration successful! Please check your email.");
       }
     } catch (error: any) {
@@ -50,6 +68,16 @@ const Auth = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <div className="space-y-2">
+                <Input
+                  placeholder="Full Name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required={!isLogin}
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Input
                 type="email"

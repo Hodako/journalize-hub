@@ -75,6 +75,7 @@ export const FeaturedSection = () => {
               {articles.map((article) => (
                 <ArticleCard
                   key={article.id}
+                  id={article.id}
                   title={article.title}
                   abstract={article.abstract || ""}
                   thumbnail={article.thumbnail_url}
