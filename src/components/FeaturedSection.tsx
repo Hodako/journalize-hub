@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { ArticleCard } from "./ArticleCard";
 import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
 
 interface Article {
   id: string;
@@ -15,7 +14,6 @@ interface Article {
 
 export const FeaturedSection = () => {
   const [articles, setArticles] = useState<Article[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,16 +22,11 @@ export const FeaturedSection = () => {
 
   const fetchArticles = async () => {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from("articles")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (searchQuery) {
-        query = query.ilike("title", `%${searchQuery}%`);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       setArticles(data || []);
     } catch (error) {
@@ -43,45 +36,34 @@ export const FeaturedSection = () => {
     }
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchArticles();
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
   return (
-    <section className="py-12">
+    <section className="py-20">
       <div className="container">
         <div className="flex flex-col gap-8">
-          <div className="flex items-center justify-between">
-            <h2 className="text-3xl font-bold animate-fade-down">
-              Featured Articles
-            </h2>
-            <div className="w-full max-w-xs">
-              <Input
-                type="search"
-                placeholder="Search articles..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
+          <h2 className="text-3xl font-bold animate-fade-down">
+            Featured Articles
+          </h2>
           {loading ? (
             <p>Loading articles...</p>
           ) : (
-            <div className="article-grid">
-              {articles.map((article) => (
-                <ArticleCard
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-up">
+              {articles.map((article, index) => (
+                <div
                   key={article.id}
-                  id={article.id}
-                  title={article.title}
-                  abstract={article.abstract || ""}
-                  thumbnail={article.thumbnail_url}
-                  category={article.category}
-                  author={article.author_id}
-                />
+                  className="transition-all duration-300"
+                  style={{
+                    animationDelay: `${index * 0.1}s`,
+                  }}
+                >
+                  <ArticleCard
+                    id={article.id}
+                    title={article.title}
+                    abstract={article.abstract || ""}
+                    thumbnail={article.thumbnail_url}
+                    category={article.category}
+                    author={article.author_id}
+                  />
+                </div>
               ))}
             </div>
           )}
