@@ -11,6 +11,9 @@ import CreateArticle from "./pages/CreateArticle";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import ReadArticle from "./pages/ReadArticle";
+import Search from "./pages/Search";
+import Category from "./pages/Category";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -24,7 +27,17 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/article/:id" element={<ReadArticle />} />
+            <Route path="/article/:slug" element={<ReadArticle />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/category/:category" element={<Category />} />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/create"
               element={

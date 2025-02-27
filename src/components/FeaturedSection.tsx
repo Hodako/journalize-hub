@@ -37,7 +37,7 @@ export const FeaturedSection = () => {
   };
 
   return (
-    <section className="py-20">
+    <section className="py-8">
       <div className="container">
         <div className="article-grid animate-fade-up">
           {loading ? (
