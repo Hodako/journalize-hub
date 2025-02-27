@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -19,11 +18,24 @@ import { toast } from "sonner";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 
+const categories = [
+  "Technology",
+  "Science",
+  "Health",
+  "Business",
+  "Entertainment",
+  "Sports",
+  "Politics",
+  "Arts",
+  "Travel",
+  "Education"
+];
+
 const CreateArticle = () => {
   const [title, setTitle] = useState("");
   const [abstract, setAbstract] = useState("");
   const [content, setContent] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState(categories[0]);
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -111,12 +123,18 @@ const CreateArticle = () => {
             />
           </div>
           <div className="space-y-2">
-            <Input
-              placeholder="Category"
+            <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
+              className="w-full p-2 border rounded-md"
               required
-            />
+            >
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="space-y-2">
             <Textarea

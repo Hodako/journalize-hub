@@ -5,9 +5,17 @@ import { Footer } from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArticleCard } from "@/components/ArticleCard";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface Profile {
   username: string | null;
@@ -21,11 +29,19 @@ interface Article {
   thumbnail_url: string;
   category: string;
   author_id: string;
+  created_at: string;
+}
+
+interface Bookmark {
+  id: string;
+  article: Article;
 }
 
 const Profile = () => {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [username, setUsername] = useState("");
@@ -33,6 +49,7 @@ const Profile = () => {
   useEffect(() => {
     fetchProfile();
     fetchUserArticles();
+    fetchBookmarks();
   }, []);
 
   const fetchProfile = async () => {
@@ -74,6 +91,26 @@ const Profile = () => {
     }
   };
 
+  const fetchBookmarks = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: bookmarks } = await supabase
+        .from('bookmarks')
+        .select(`
+          id,
+          article:articles (*)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      setBookmarks(bookmarks || []);
+    } catch (error) {
+      console.error('Error fetching bookmarks:', error);
+    }
+  };
+
   const updateProfile = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -93,6 +130,70 @@ const Profile = () => {
       toast.error(error.message);
     }
   };
+
+  const deleteArticle = async (articleId: string) => {
+    if (!confirm('Are you sure you want to delete this article?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('articles')
+        .delete()
+        .eq('id', articleId);
+
+      if (error) throw error;
+
+      toast.success('Article deleted successfully');
+      fetchUserArticles();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const ArticleCard = ({ article }: { article: Article }) => (
+    <Card>
+      <div className="relative">
+        <img
+          src={article.thumbnail_url || ''}
+          alt={article.title}
+          className="w-full h-48 object-cover rounded-t"
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => navigate(`/article/${article.id}`)}>
+              View
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate(`/edit/${article.id}`)}>
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-destructive"
+              onClick={() => deleteArticle(article.id)}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <CardContent className="p-4">
+        <h3 className="font-semibold mb-2 line-clamp-2">{article.title}</h3>
+        <p className="text-sm text-muted-foreground line-clamp-2">
+          {article.abstract}
+        </p>
+        <div className="mt-2 text-xs text-muted-foreground">
+          {new Date(article.created_at).toLocaleDateString()}
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="min-h-screen">
@@ -128,24 +229,42 @@ const Profile = () => {
           </Card>
 
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Your Articles</h2>
-            {loading ? (
-              <p>Loading articles...</p>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {articles.map((article) => (
-                  <ArticleCard
-                    key={article.id}
-                    id={article.id}
-                    title={article.title}
-                    abstract={article.abstract}
-                    thumbnail={article.thumbnail_url}
-                    category={article.category}
-                    author={article.author_id}
-                  />
-                ))}
-              </div>
-            )}
+            <Tabs defaultValue="articles">
+              <TabsList>
+                <TabsTrigger value="articles">Your Articles</TabsTrigger>
+                <TabsTrigger value="bookmarks">Bookmarks</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="articles" className="mt-6">
+                {loading ? (
+                  <p>Loading articles...</p>
+                ) : (
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {articles.map((article) => (
+                      <ArticleCard key={article.id} article={article} />
+                    ))}
+                    {articles.length === 0 && (
+                      <p className="col-span-full text-center text-muted-foreground">
+                        You haven't created any articles yet.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="bookmarks" className="mt-6">
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {bookmarks.map((bookmark) => (
+                    <ArticleCard key={bookmark.id} article={bookmark.article} />
+                  ))}
+                  {bookmarks.length === 0 && (
+                    <p className="col-span-full text-center text-muted-foreground">
+                      You haven't bookmarked any articles yet.
+                    </p>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </main>

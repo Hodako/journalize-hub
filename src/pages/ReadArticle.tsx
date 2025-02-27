@@ -1,12 +1,14 @@
-
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Bookmark, Share } from "lucide-react";
 import { shuffle } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface Article {
   id: string;
@@ -21,14 +23,17 @@ interface Article {
 
 const ReadArticle = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [article, setArticle] = useState<Article | null>(null);
   const [suggestions, setSuggestions] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
+  const [isBookmarked, setIsBookmarked] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchArticle(id);
+      checkBookmarkStatus(id);
     }
   }, [id]);
 
@@ -42,6 +47,7 @@ const ReadArticle = () => {
 
       if (error) throw error;
       setArticle(data);
+      document.title = data.title; // Update page title for SEO
 
       // Fetch suggestions after getting the article
       if (data) {
@@ -49,26 +55,67 @@ const ReadArticle = () => {
       }
     } catch (error) {
       console.error("Error fetching article:", error);
+      navigate("/404");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchSuggestions = async (category: string, currentArticleId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("articles")
-        .select("*")
-        .eq("category", category)
-        .neq("id", currentArticleId)
-        .limit(4);
+  const checkBookmarkStatus = async (articleId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-      if (error) throw error;
-      setSuggestions(shuffle(data || []));
+    const { data, error } = await supabase
+      .from("bookmarks")
+      .select("id")
+      .eq("article_id", articleId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (!error && data) {
+      setIsBookmarked(true);
+    }
+  };
+
+  const toggleBookmark = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("Please sign in to bookmark articles");
+      return;
+    }
+
+    try {
+      if (isBookmarked) {
+        await supabase
+          .from("bookmarks")
+          .delete()
+          .eq("article_id", id)
+          .eq("user_id", user.id);
+        setIsBookmarked(false);
+        toast.success("Bookmark removed");
+      } else {
+        await supabase
+          .from("bookmarks")
+          .insert([{ article_id: id, user_id: user.id }]);
+        setIsBookmarked(true);
+        toast.success("Article bookmarked");
+      }
     } catch (error) {
-      console.error("Error fetching suggestions:", error);
-    } finally {
-      setLoadingSuggestions(false);
+      console.error("Error toggling bookmark:", error);
+      toast.error("Failed to update bookmark");
+    }
+  };
+
+  const shareArticle = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: article?.title,
+        text: article?.abstract,
+        url: window.location.href,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success("Link copied to clipboard");
     }
   };
 
@@ -111,18 +158,36 @@ const ReadArticle = () => {
       <Header />
       <main className="container max-w-4xl py-8">
         <article className="prose lg:prose-xl mx-auto">
-          <h1 className="text-4xl font-bold mb-4">{article.title}</h1>
-          <div className="text-muted-foreground mb-8">
-            {new Date(article.created_at).toLocaleDateString()}
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-4xl font-bold mb-0">{article?.title}</h1>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleBookmark}
+                className={isBookmarked ? "text-primary" : ""}
+              >
+                <Bookmark className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={shareArticle}>
+                <Share className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
-          {article.thumbnail_url && (
+          <div className="text-muted-foreground mb-8">
+            {article?.created_at && new Date(article.created_at).toLocaleDateString()}
+          </div>
+          {article?.thumbnail_url && (
             <img
               src={article.thumbnail_url}
               alt={article.title}
               className="w-full h-64 object-cover rounded-lg mb-8"
             />
           )}
-          <div dangerouslySetInnerHTML={{ __html: article.content }} />
+          <div 
+            className="prose dark:prose-invert"
+            dangerouslySetInnerHTML={{ __html: article?.content || "" }} 
+          />
         </article>
 
         {/* Suggestions Section */}
