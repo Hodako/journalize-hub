@@ -32,8 +32,10 @@ interface Article {
   created_at: string;
 }
 
-interface Bookmark {
+interface BookmarkData {
   id: string;
+  article_id: string;
+  user_id: string;
   article: Article;
 }
 
@@ -41,7 +43,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const [bookmarks, setBookmarks] = useState<BookmarkData[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [username, setUsername] = useState("");
@@ -96,16 +98,17 @@ const Profile = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: bookmarks } = await supabase
+      const { data } = await supabase
         .from('bookmarks')
         .select(`
           id,
+          article_id,
+          user_id,
           article:articles (*)
         `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .eq('user_id', user.id);
 
-      setBookmarks(bookmarks || []);
+      setBookmarks(data || []);
     } catch (error) {
       console.error('Error fetching bookmarks:', error);
     }

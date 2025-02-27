@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -30,6 +31,24 @@ const ReadArticle = () => {
   const [loadingSuggestions, setLoadingSuggestions] = useState(true);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
+  const fetchSuggestions = async (category: string, currentArticleId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("articles")
+        .select("*")
+        .eq("category", category)
+        .neq("id", currentArticleId)
+        .limit(4);
+
+      if (error) throw error;
+      setSuggestions(shuffle(data || []));
+    } catch (error) {
+      console.error("Error fetching suggestions:", error);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
   useEffect(() => {
     if (id) {
       fetchArticle(id);
@@ -47,9 +66,8 @@ const ReadArticle = () => {
 
       if (error) throw error;
       setArticle(data);
-      document.title = data.title; // Update page title for SEO
+      document.title = data.title;
 
-      // Fetch suggestions after getting the article
       if (data) {
         fetchSuggestions(data.category, data.id);
       }
@@ -67,10 +85,10 @@ const ReadArticle = () => {
 
     const { data, error } = await supabase
       .from("bookmarks")
-      .select("id")
+      .select("*")
       .eq("article_id", articleId)
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (!error && data) {
       setIsBookmarked(true);
@@ -86,17 +104,20 @@ const ReadArticle = () => {
 
     try {
       if (isBookmarked) {
-        await supabase
+        const { error } = await supabase
           .from("bookmarks")
           .delete()
-          .eq("article_id", id)
-          .eq("user_id", user.id);
+          .match({ article_id: id, user_id: user.id });
+
+        if (error) throw error;
         setIsBookmarked(false);
         toast.success("Bookmark removed");
       } else {
-        await supabase
+        const { error } = await supabase
           .from("bookmarks")
-          .insert([{ article_id: id, user_id: user.id }]);
+          .insert({ article_id: id, user_id: user.id });
+
+        if (error) throw error;
         setIsBookmarked(true);
         toast.success("Article bookmarked");
       }
