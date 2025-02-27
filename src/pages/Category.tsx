@@ -13,6 +13,9 @@ interface Article {
   thumbnail_url: string;
   category: string;
   author_id: string;
+  author: {
+    username: string;
+  } | null;
 }
 
 const Category = () => {
@@ -30,8 +33,11 @@ const Category = () => {
     try {
       const { data, error } = await supabase
         .from("articles")
-        .select("*")
-        .eq("category", categoryName)
+        .select(`
+          *,
+          author:profiles(username)
+        `)
+        .ilike("category", categoryName)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -62,11 +68,11 @@ const Category = () => {
                 abstract={article.abstract}
                 thumbnail={article.thumbnail_url}
                 category={article.category}
-                author={article.author_id}
+                author={article.author?.username || `user_${article.author_id.substring(0, 8)}`}
               />
             ))}
             {articles.length === 0 && (
-              <p>No articles found in this category.</p>
+              <p className="col-span-full">No articles found in this category.</p>
             )}
           </div>
         )}
