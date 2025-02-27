@@ -5,6 +5,8 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import { shuffle } from "@/lib/utils";
 
 interface Article {
   id: string;
@@ -20,28 +22,55 @@ interface Article {
 const ReadArticle = () => {
   const { id } = useParams();
   const [article, setArticle] = useState<Article | null>(null);
+  const [suggestions, setSuggestions] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(true);
 
   useEffect(() => {
-    const fetchArticle = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("articles")
-          .select("*")
-          .eq("id", id)
-          .single();
-
-        if (error) throw error;
-        setArticle(data);
-      } catch (error) {
-        console.error("Error fetching article:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (id) fetchArticle();
+    if (id) {
+      fetchArticle(id);
+    }
   }, [id]);
+
+  const fetchArticle = async (articleId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("articles")
+        .select("*")
+        .eq("id", articleId)
+        .single();
+
+      if (error) throw error;
+      setArticle(data);
+
+      // Fetch suggestions after getting the article
+      if (data) {
+        fetchSuggestions(data.category, data.id);
+      }
+    } catch (error) {
+      console.error("Error fetching article:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSuggestions = async (category: string, currentArticleId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("articles")
+        .select("*")
+        .eq("category", category)
+        .neq("id", currentArticleId)
+        .limit(4);
+
+      if (error) throw error;
+      setSuggestions(shuffle(data || []));
+    } catch (error) {
+      console.error("Error fetching suggestions:", error);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -63,7 +92,18 @@ const ReadArticle = () => {
   }
 
   if (!article) {
-    return <div>Article not found</div>;
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <main className="container py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Article not found</h1>
+            <p>The article you're looking for doesn't exist or has been removed.</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   return (
@@ -84,6 +124,54 @@ const ReadArticle = () => {
           )}
           <div dangerouslySetInnerHTML={{ __html: article.content }} />
         </article>
+
+        {/* Suggestions Section */}
+        <div className="mt-16">
+          <h2 className="text-2xl font-bold mb-6">Related Articles</h2>
+          {loadingSuggestions ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array(3).fill(null).map((_, index) => (
+                <Card key={index}>
+                  <CardContent className="p-4">
+                    <Skeleton className="h-32 w-full mb-4" />
+                    <Skeleton className="h-4 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : suggestions.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {suggestions.slice(0, 3).map((suggestion) => (
+                <Card
+                  key={suggestion.id}
+                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => {
+                    window.location.href = `/article/${suggestion.id}`;
+                  }}
+                >
+                  <CardContent className="p-0">
+                    <img
+                      src={suggestion.thumbnail_url || ''}
+                      alt={suggestion.title}
+                      className="w-full h-32 object-cover"
+                    />
+                    <div className="p-4">
+                      <h3 className="font-semibold mb-2 line-clamp-2">
+                        {suggestion.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {suggestion.abstract}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground">No related articles found.</p>
+          )}
+        </div>
       </main>
       <Footer />
     </div>

@@ -1,7 +1,9 @@
 
 import React, { useEffect, useState } from "react";
 import { ArticleCard } from "./ArticleCard";
+import { ArticleCardSkeleton } from "./ArticleCardSkeleton";
 import { supabase } from "@/integrations/supabase/client";
+import { shuffle } from "@/lib/utils";
 
 interface Article {
   id: string;
@@ -28,7 +30,7 @@ export const FeaturedSection = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setArticles(data || []);
+      setArticles(shuffle(data || []));
     } catch (error) {
       console.error("Error fetching articles:", error);
     } finally {
@@ -41,7 +43,9 @@ export const FeaturedSection = () => {
       <div className="container">
         <div className="article-grid animate-fade-up">
           {loading ? (
-            <p>Loading articles...</p>
+            Array(8).fill(null).map((_, index) => (
+              <ArticleCardSkeleton key={index} />
+            ))
           ) : (
             articles.map((article, index) => (
               <div
