@@ -1,234 +1,245 @@
- 
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Bold,
+  Italic,
+  Underline,
+  Link,
+  Image,
+  Type,
+  ListOrdered,
+  ListMinus,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { supabase } from "@/integrations/supabase/client";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { Bookmark, Share } from "lucide-react";
-import { toast } from "sonner";
+import slugify from "slugify";
 
-interface Article {
-  id: string;
-  title: string;
-  content: string;
-  abstract: string;
-  category: string;
-  thumbnail_url: string;
-  author_id: string;
-  created_at: string;
-  author?: {
-    username: string;
-  };
-}
+const categories = [
+  "Technology",
+  "Science",
+  "Health",
+  "Business",
+  "Entertainment",
+  "Sports",
+  "Politics",
+  "Arts",
+  "Travel",
+  "Education"
+];
 
-const AuthorArticle = () => {
-  const { author, slug } = useParams();
+const CreateArticle = () => {
+  const [title, setTitle] = useState("");
+  const [abstract, setAbstract] = useState("");
+  const [content, setContent] = useState("");
+  const [category, setCategory] = useState(categories[0]);
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const [article, setArticle] = useState<Article | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isBookmarked, setIsBookmarked] = useState(false);
 
-  useEffect(() => {
-    if (author && slug) {
-      fetchArticleBySlug(author, slug);
-      document.title = `${slug} - BanguJournal`;
-    }
-  }, [author, slug]);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-  const fetchArticleBySlug = async (authorName: string, articleSlug: string) => {
     try {
-      console.log(`Fetching article by author: ${authorName} and slug: ${articleSlug}`);
-      
-      // First try to fetch all articles 
-      const { data: articles, error } = await supabase
-        .from("articles")
-        .select(`
-          *,
-          author:profiles(username)
-        `);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
 
-      if (error) throw error;
-      
-      if (!articles || articles.length === 0) {
-        throw new Error("No articles found");
-      }
-      
-      console.log(`Found ${articles.length} articles in total`);
-      
-      // Normalize the slug for comparison (encode URL-safe)
-      const titleSlug = encodeURIComponent(articleSlug.toLowerCase()).replace(/%20/g, '-');
-      
-      // Find the article with matching slug derived from title
-      const matchingArticle = articles.find(a => {
-        const currentSlug = encodeURIComponent(a.title.toLowerCase()).replace(/%20/g, '-');
-        return currentSlug === titleSlug;
+      const slug = slugify(title, { lower: true, strict: true });
+
+      const { error } = await supabase.from("articles").insert({
+        title,
+        abstract,
+        content,
+        category,
+        thumbnail_url: thumbnailUrl,
+        author_id: user.id,
+        slug,
       });
 
-      if (!matchingArticle) {
-        console.error("No article matches the slug:", titleSlug);
-        throw new Error("Article not found");
-      }
+      if (error) throw error;
 
-      // Now check if author matches
-      const displayedAuthor = matchingArticle.author?.username || `user_${matchingArticle.author_id.substring(0, 8)}`;
-      
-      if (displayedAuthor !== authorName && authorName !== matchingArticle.author_id) {
-        console.error("Author mismatch:", displayedAuthor, authorName);
-        throw new Error("Author mismatch");
-      }
-
-      console.log("Article found:", matchingArticle.title);
-      setArticle(matchingArticle);
-      checkBookmarkStatus(matchingArticle.id);
-    } catch (error) {
-      console.error("Error fetching article:", error);
-      navigate("/404");
+      toast.success("Article created successfully!");
+      navigate("/");
+    } catch (error: any) {
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const checkBookmarkStatus = async (articleId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  const formatSelection = (tag: string) => {
+    const textarea = document.getElementById("content") as HTMLTextAreaElement;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.substring(start, end);
+    const beforeText = content.substring(0, start);
+    const afterText = content.substring(end);
 
-    const { data, error } = await supabase
-      .from("bookmarks")
-      .select("*")
-      .eq("article_id", articleId)
-      .eq("user_id", user.id)
-      .maybeSingle();
+    setContent(`${beforeText}<${tag}>${selectedText}</${tag}>${afterText}`);
+  };
 
-    if (!error && data) {
-      setIsBookmarked(true);
+  const insertLink = () => {
+    const url = prompt("Enter URL:");
+    if (url) {
+      const textarea = document.getElementById("content") as HTMLTextAreaElement;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selectedText = content.substring(start, end);
+      const beforeText = content.substring(0, start);
+      const afterText = content.substring(end);
+
+      setContent(
+        `${beforeText}<a href="${url}">${selectedText || url}</a>${afterText}`
+      );
     }
   };
 
-  const toggleBookmark = async () => {
-    if (!article) return;
-    
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error("Please sign in to bookmark articles");
-      return;
-    }
+  const insertImage = () => {
+    const url = prompt("Enter image URL:");
+    if (url) {
+      const textarea = document.getElementById("content") as HTMLTextAreaElement;
+      const start = textarea.selectionStart;
+      const beforeText = content.substring(0, start);
+      const afterText = content.substring(start);
 
-    try {
-      if (isBookmarked) {
-        const { error } = await supabase
-          .from("bookmarks")
-          .delete()
-          .match({ article_id: article.id, user_id: user.id });
-
-        if (error) throw error;
-        setIsBookmarked(false);
-        toast.success("Bookmark removed");
-      } else {
-        const { error } = await supabase
-          .from("bookmarks")
-          .insert({ article_id: article.id, user_id: user.id });
-
-        if (error) throw error;
-        setIsBookmarked(true);
-        toast.success("Article bookmarked");
-      }
-    } catch (error) {
-      console.error("Error toggling bookmark:", error);
-      toast.error("Failed to update bookmark");
+      setContent(`${beforeText}<img src="${url}" alt="Image" />${afterText}`);
     }
   };
-
-  const shareArticle = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: article?.title,
-        text: article?.abstract,
-        url: window.location.href,
-      }).catch(console.error);
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success("Link copied to clipboard");
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <main className="container max-w-4xl py-8">
-          <Skeleton className="h-8 w-3/4 mb-4" />
-          <Skeleton className="h-4 w-1/4 mb-8" />
-          <Skeleton className="h-64 w-full mb-8" />
-          <div className="space-y-4">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (!article) {
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <main className="container py-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Article not found</h1>
-            <p>The article you're looking for doesn't exist or has been removed.</p>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen">
       <Header />
       <main className="container max-w-4xl py-8">
-        <article className="prose lg:prose-xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-4xl font-bold mb-0">{article?.title}</h1>
-            <div className="flex gap-2">
+        <h1 className="text-3xl font-bold mb-8">Create New Article</h1>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Input
+              placeholder="Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              className="text-xl font-bold"
+            />
+          </div>
+          <div className="space-y-2">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full p-2 border rounded-md"
+              required
+            >
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Abstract"
+              value={abstract}
+              onChange={(e) => setAbstract(e.target.value)}
+              required
+            />
+          </div>
+          <div className="border rounded-lg p-2 space-y-2">
+            <div className="flex gap-2 border-b pb-2">
               <Button
+                type="button"
                 variant="ghost"
-                size="icon"
-                onClick={toggleBookmark}
-                className={isBookmarked ? "text-primary" : ""}
+                size="sm"
+                onClick={() => formatSelection("b")}
               >
-                <Bookmark className="h-5 w-5" />
+                <Bold className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={shareArticle}>
-                <Share className="h-5 w-5" />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => formatSelection("i")}
+              >
+                <Italic className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => formatSelection("u")}
+              >
+                <Underline className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={insertLink}
+              >
+                <Link className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={insertImage}
+              >
+                <Image className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => formatSelection("h2")}
+              >
+                <Type className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => formatSelection("ol")}
+              >
+                <ListOrdered className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => formatSelection("ul")}
+              >
+                <ListMinus className="h-4 w-4" />
               </Button>
             </div>
-          </div>
-          <div className="text-muted-foreground mb-8 flex justify-between">
-            <span>By {article.author?.username || `user_${article.author_id.substring(0, 8)}`}</span>
-            <span>{article?.created_at && new Date(article.created_at).toLocaleDateString()}</span>
-          </div>
-          {article?.thumbnail_url && (
-            <img
-              src={article.thumbnail_url}
-              alt={article.title}
-              className="w-full h-64 object-cover rounded-lg mb-8"
+            <Textarea
+              id="content"
+              placeholder="Write your article content here..."
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              required
+              className="min-h-[400px]"
             />
-          )}
-          <div 
-            className="prose dark:prose-invert"
-            dangerouslySetInnerHTML={{ __html: article?.content || "" }} 
-          />
-        </article>
+          </div>
+          <div className="space-y-2">
+            <Input
+              placeholder="Thumbnail URL"
+              value={thumbnailUrl}
+              onChange={(e) => setThumbnailUrl(e.target.value)}
+              required
+            />
+          </div>
+          <Button type="submit" disabled={loading}>
+            {loading ? "Creating..." : "Create Article"}
+          </Button>
+        </form>
       </main>
       <Footer />
     </div>
   );
 };
 
-export default AuthorArticle;
-
+export default CreateArticle;
