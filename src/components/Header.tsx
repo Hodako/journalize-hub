@@ -32,9 +32,12 @@ const categories = [
   "Arts"
 ];
 
+// Hard-coded admin emails for demonstration
+const ADMIN_EMAILS = ["admin@example.com"];
+
 export const Header = () => {
   const navigate = useNavigate();
-  const [user, setUser] = React.useState(null);
+  const [user, setUser] = React.useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { theme, setTheme } = useTheme();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -45,15 +48,8 @@ export const Header = () => {
       setUser(user);
       
       if (user) {
-        // Check if user has admin role
-        const { data } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .maybeSingle();
-          
-        setIsAdmin(!!data);
+        // Simple admin check based on email
+        setIsAdmin(ADMIN_EMAILS.includes(user.email));
       }
     };
     
@@ -64,15 +60,8 @@ export const Header = () => {
       setUser(currentUser);
       
       if (currentUser) {
-        // Check if user has admin role
-        const { data } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', currentUser.id)
-          .eq('role', 'admin')
-          .maybeSingle();
-          
-        setIsAdmin(!!data);
+        // Simple admin check based on email
+        setIsAdmin(ADMIN_EMAILS.includes(currentUser.email));
       } else {
         setIsAdmin(false);
       }

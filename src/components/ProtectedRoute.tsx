@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
+// Hard-coded admin emails for demonstration
+const ADMIN_EMAILS = ["admin@example.com"];
+
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
@@ -10,7 +13,7 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
 
@@ -20,15 +23,8 @@ export const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRout
       setUser(user);
       
       if (user && requireAdmin) {
-        // Check if user has admin role
-        const { data } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .maybeSingle();
-          
-        setIsAdmin(!!data);
+        // Simple admin check based on email
+        setIsAdmin(ADMIN_EMAILS.includes(user.email));
       }
       
       setLoading(false);
