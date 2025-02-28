@@ -18,6 +18,7 @@ import AIChat from "./pages/AIChat";
 import EditArticle from "./pages/EditArticle";
 import AuthorArticle from "./pages/AuthorArticle";
 import AdminDashboard from "./pages/AdminDashboard";
+import About from "./pages/About";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/search" element={<Search />} />
             <Route path="/category/:category" element={<Category />} />
             <Route path="/ai-chat" element={<AIChat />} />
+            <Route path="/about" element={<About />} />
             <Route
               path="/profile"
               element={
@@ -63,7 +65,7 @@ const App = () => (
             <Route
               path="/admin"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireAdmin={true}>
                   <AdminDashboard />
                 </ProtectedRoute>
               }

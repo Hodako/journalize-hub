@@ -21,9 +21,10 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   category,
   author,
 }) => {
-  // Use article ID instead of slug-based URL
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  
   return (
-    <Link to={`/article/${id}`}>
+    <Link to={`/author/${author}/${slug}`}>
       <Card className="article-card group animate-scale-up">
         <div className="relative">
           <img

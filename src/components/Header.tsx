@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Menu, Search, Sun, Moon, User, ChevronDown, Bot } from "lucide-react";
+import { Menu, Search, Sun, Moon, User, ChevronDown, Bot, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -37,14 +37,45 @@ export const Header = () => {
   const [user, setUser] = React.useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { theme, setTheme } = useTheme();
+  const [isAdmin, setIsAdmin] = useState(false);
 
   React.useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-    });
+      
+      if (user) {
+        // Check if user has admin role
+        const { data } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+          
+        setIsAdmin(!!data);
+      }
+    };
+    
+    checkUser();
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    supabase.auth.onAuthStateChange(async (_event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      if (currentUser) {
+        // Check if user has admin role
+        const { data } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', currentUser.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+          
+        setIsAdmin(!!data);
+      } else {
+        setIsAdmin(false);
+      }
     });
   }, []);
 
@@ -117,6 +148,14 @@ export const Header = () => {
                   <Button
                     variant="ghost"
                     className="w-full justify-start"
+                    onClick={() => navigate("/about")}
+                  >
+                    <Info className="mr-2 h-4 w-4" />
+                    About
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
                     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                   >
                     {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
@@ -157,6 +196,14 @@ export const Header = () => {
             onClick={() => navigate("/ai-chat")}
           >
             <Bot className="h-4 w-4" /> AI Chat
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            className="hidden md:flex items-center gap-1"
+            onClick={() => navigate("/about")}
+          >
+            <Info className="h-4 w-4" /> About
           </Button>
         </div>
 
@@ -203,9 +250,11 @@ export const Header = () => {
                   <DropdownMenuItem onClick={() => navigate("/profile")}>
                     Profile
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/admin")}>
-                    Admin Dashboard
-                  </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => navigate("/admin")}>
+                      Admin Dashboard
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     Sign Out
