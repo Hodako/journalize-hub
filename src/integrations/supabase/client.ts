@@ -4,7 +4,7 @@ import type { Database } from './types';
 
 const SUPABASE_URL = "https://robymkbuuqottdkjrwxm.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvYnlta2J1dXFvdHRka2pyd3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MjY4MDgsImV4cCI6MjA1NjEwMjgwOH0.CibiZdfNmNLhY2942-lwMMnNjEE_-xotx8UK0O_WnK4";
-
+const GEMINI_API_KEY = "AIzaSyC6GBGFfaZ0HJeHJdQYXtcd6oBZqGO2_j4"
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
