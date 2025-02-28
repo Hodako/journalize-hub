@@ -14,6 +14,10 @@ import ReadArticle from "./pages/ReadArticle";
 import Search from "./pages/Search";
 import Category from "./pages/Category";
 import Profile from "./pages/Profile";
+import AIChat from "./pages/AIChat";
+import EditArticle from "./pages/EditArticle";
+import AuthorArticle from "./pages/AuthorArticle";
+import AdminDashboard from "./pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -28,8 +32,10 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/article/:id" element={<ReadArticle />} />
+            <Route path="/author/:author/:slug" element={<AuthorArticle />} />
             <Route path="/search" element={<Search />} />
             <Route path="/category/:category" element={<Category />} />
+            <Route path="/ai-chat" element={<AIChat />} />
             <Route
               path="/profile"
               element={
@@ -43,6 +49,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CreateArticle />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/edit/:id"
+              element={
+                <ProtectedRoute>
+                  <EditArticle />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminDashboard />
                 </ProtectedRoute>
               }
             />

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Menu, Search, Sun, Moon, User, ChevronDown } from "lucide-react";
+import { Menu, Search, Sun, Moon, User, ChevronDown, Bot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -109,6 +109,14 @@ export const Header = () => {
                   <Button
                     variant="ghost"
                     className="w-full justify-start"
+                    onClick={() => navigate("/ai-chat")}
+                  >
+                    <Bot className="mr-2 h-4 w-4" />
+                    AI Chat
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
                     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                   >
                     {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
@@ -119,7 +127,7 @@ export const Header = () => {
             </SheetContent>
           </Sheet>
           <a href="/" className="text-xl font-bold transition-transform hover:scale-105">
-            Journal<span className="text-primary">Hub</span>
+            Bangu<span className="text-primary">Journal</span>
           </a>
           
           {/* Desktop Categories Menu */}
@@ -142,6 +150,14 @@ export const Header = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          
+          <Button 
+            variant="ghost" 
+            className="hidden md:flex items-center gap-1"
+            onClick={() => navigate("/ai-chat")}
+          >
+            <Bot className="h-4 w-4" /> AI Chat
+          </Button>
         </div>
 
         <div className="flex items-center gap-4">
@@ -177,6 +193,9 @@ export const Header = () => {
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/profile")}>
                     Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/admin")}>
+                    Admin Dashboard
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
