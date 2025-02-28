@@ -17,7 +17,6 @@ interface Article {
   thumbnail_url: string;
   author_id: string;
   created_at: string;
-  slug: string; // Add slug here
   author?: {
     username: string;
   };
@@ -37,68 +36,72 @@ const AuthorArticle = () => {
     }
   }, [author, slug]);
 
-  const generateSimplifiedSlug = (title: string): string => {
-    if (!title) return "";
-
-    const banglaToEnglish: { [key: string]: string } = {
-      " ": "-",
-      "া": "a",
-      "ি": "i",
-      "ী": "i",
-      "ু": "u",
-      "ূ": "u",
-      "ে": "e",
-      "ৈ": "oi",
-      "ো": "o",
-      "ৌ": "ou",
-      "ঁ": "",
+  const banglaToBanglish = (text) => {
+    const mappings = {
+      "অ": "o", "আ": "a", "ই": "i", "ঈ": "i", "উ": "u", "ঊ": "u", "ঋ": "ri",
+      "এ": "e", "ঐ": "oi", "ও": "o", "ঔ": "ou",
+      "ক": "k", "খ": "kh", "গ": "g", "ঘ": "gh", "ঙ": "ng",
+      "চ": "ch", "ছ": "chh", "জ": "j", "ঝ": "jh", "ঞ": "ny",
+      "ট": "t", "ঠ": "th", "ড": "d", "ঢ": "dh", "ণ": "n",
+      "ত": "t", "থ": "th", "দ": "d", "ধ": "dh", "ন": "n",
+      "প": "p", "ফ": "ph", "ব": "b", "ভ": "bh", "ম": "m",
+      "য": "y", "র": "r", "ল": "l", "শ": "sh", "ষ": "sh", "স": "s",
+      "হ": "h", "ড়": "r", "ঢ়": "rh", "য়": "y", "ৎ": "t", "ং": "ng",
+      "ঃ": "h", "ঁ": "",
+      "া": "a", "ি": "i", "ী": "i", "ু": "u", "ূ": "u", "ৃ": "ri",
+      "ে": "e", "ৈ": "oi", "ো": "o", "ৌ": "ou", "্": "",
+      " ": " ", ".": ".", ",": ",", "?":"?", "!":"!", ":":":", ";":";",
     };
 
-    let slug = title
-      .toLowerCase()
-      .split("")
-      .map((char) => banglaToEnglish[char] || (/[a-z0-9]/.test(char) ? char : "-"))
-      .join("")
-      .replace(/--+/g, "-")
-      .replace(/^-+|-+$/g, "");
+    let banglishText = "";
+    for (const char of text) {
+      if (mappings[char]) {
+        banglishText += mappings[char];
+      } else {
+        banglishText += char;
+      }
+    }
 
-    return slug;
+    banglishText = banglishText.replace(/\s+/g, " ").trim();
+    return banglishText;
   };
 
-  const fetchArticleBySlug = async (authorId: string, articleSlug: string) => {
+  const fetchArticleBySlug = async (authorName: string, articleSlug: string) => {
     try {
-      console.log(`Fetching article by author: ${authorId} and slug: ${articleSlug}`);
+      console.log(`Fetching article by author: ${authorName} and slug: ${articleSlug}`);
 
-      const { data, error } = await supabase
+      const { data: articles, error } = await supabase
         .from("articles")
-        .select(`
-          *,
-          author:profiles(username)
-        `)
-        .eq("author_id", authorId)
-        .eq("slug", articleSlug)
-        .single();
+        .select(`*, author:profiles(username)`);
 
-      if (error) {
-        if (error.code === "PGRST116") {
-          navigate("/404");
-          return;
-        }
-        throw error;
+      if (error) throw error;
+      if (!articles || articles.length === 0) {
+        throw new Error("No articles found");
+      }
+      console.log(`Found ${articles.length} articles in total`);
+
+      const matchingArticle = articles.find((a) => {
+        const currentSlug = banglaToBanglish(a.title).toLowerCase().replace(/[^a-z0-9]+/g, "-");
+        return currentSlug === articleSlug.toLowerCase();
+      });
+
+      if (!matchingArticle) {
+        console.error("No article matches the slug:", articleSlug);
+        throw new Error("Article not found");
       }
 
-      if (!data) {
-        console.error("Article not found");
-        navigate("/404");
-        return;
+      const displayedAuthor = matchingArticle.author?.username || `user_${matchingArticle.author_id.substring(0, 8)}`;
+      if (displayedAuthor !== authorName && authorName !== matchingArticle.author_id) {
+        console.error("Author mismatch:", displayedAuthor, authorName);
+        throw new Error("Author mismatch");
       }
 
-      console.log("Article found:", data.title);
-      setArticle(data);
-      checkBookmarkStatus(data.id);
+      console.log("Article found:", matchingArticle.title);
+      setArticle(matchingArticle);
+      checkBookmarkStatus(matchingArticle.id);
     } catch (error) {
       console.error("Error fetching article:", error);
-      toast.error("Error loading article.");
+      navigate("/404");
     } finally {
       setLoading(false);
     }
@@ -122,7 +125,6 @@ const AuthorArticle = () => {
 
   const toggleBookmark = async () => {
     if (!article) return;
-    
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast.error("Please sign in to bookmark articles");
@@ -135,7 +137,6 @@ const AuthorArticle = () => {
           .from("bookmarks")
           .delete()
           .match({ article_id: article.id, user_id: user.id });
-
         if (error) throw error;
         setIsBookmarked(false);
         toast.success("Bookmark removed");
@@ -143,7 +144,6 @@ const AuthorArticle = () => {
         const { error } = await supabase
           .from("bookmarks")
           .insert({ article_id: article.id, user_id: user.id });
-
         if (error) throw error;
         setIsBookmarked(true);
         toast.success("Article bookmarked");
@@ -206,44 +206,5 @@ const AuthorArticle = () => {
       <Header />
       <main className="container max-w-4xl py-8">
         <article className="prose lg:prose-xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-4xl font-bold mb-0">{article?.title}</h1>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleBookmark}
-                className={isBookmarked ? "text-primary" : ""}
-              >
-                <Bookmark className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={shareArticle}>
-                <Share className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-          <div className="text-muted-foreground mb-8 flex justify-between">
-            <span>By {article.author?.username || `user_${article.author_id.substring(0, 8)}`}</span>
-            <span>{article?.created_at && new Date(article.created_at).toLocaleDateString()}</span>
-          </div>
-          {article?.thumbnail_url && (
-            <img
-              src={article.thumbnail_url}
-              alt={article.title}
-              className="w-full h-64 object-cover rounded-lg mb-8"
-            />
-          )}
-          <div 
-            className="prose dark:prose-invert"
-            dangerouslySetInnerHTML={{ __html: article?.content || "" }} 
-          />
-        </article>
-      </main>
-      <Footer />
-    </div>
-  );
-};
+          <div
 
-export default AuthorArticle;
-
- 
