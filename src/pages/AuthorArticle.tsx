@@ -39,51 +39,45 @@ const AuthorArticle = () => {
 
   const fetchArticleBySlug = async (authorName: string, articleSlug: string) => {
     try {
-      // First try to fetch by username
-      let { data: authorData } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("username", authorName)
-        .single();
-
-      // If not found by username, try by user_id prefix
-      if (!authorData && authorName.startsWith("user_")) {
-        const idPrefix = authorName.replace("user_", "");
-        const { data: authors } = await supabase
-          .from("profiles")
-          .select("id")
-          .like("id", `${idPrefix}%`);
-          
-        if (authors && authors.length > 0) {
-          authorData = authors[0];
-        }
-      }
-
-      if (!authorData) {
-        throw new Error("Author not found");
-      }
-
-      // Now fetch articles by this author
+      console.log(`Fetching article by author: ${authorName} and slug: ${articleSlug}`);
+      
+      // First try to fetch all articles 
       const { data: articles, error } = await supabase
         .from("articles")
         .select(`
           *,
           author:profiles(username)
-        `)
-        .eq("author_id", authorData.id);
+        `);
 
       if (error) throw error;
-
-      // Find the article with matching slug
+      
+      if (!articles || articles.length === 0) {
+        throw new Error("No articles found");
+      }
+      
+      console.log(`Found ${articles.length} articles in total`);
+      
+      // Find the article with matching slug derived from title
       const titleSlug = articleSlug.toLowerCase();
-      const matchingArticle = articles?.find(a => 
-        a.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') === titleSlug
-      );
+      const matchingArticle = articles.find(a => {
+        const currentSlug = a.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        return currentSlug === titleSlug;
+      });
 
       if (!matchingArticle) {
+        console.error("No article matches the slug:", titleSlug);
         throw new Error("Article not found");
       }
 
+      // Now check if author matches
+      const displayedAuthor = matchingArticle.author?.username || `user_${matchingArticle.author_id.substring(0, 8)}`;
+      
+      if (displayedAuthor !== authorName && authorName !== matchingArticle.author_id) {
+        console.error("Author mismatch:", displayedAuthor, authorName);
+        throw new Error("Author mismatch");
+      }
+
+      console.log("Article found:", matchingArticle.title);
       setArticle(matchingArticle);
       checkBookmarkStatus(matchingArticle.id);
     } catch (error) {
