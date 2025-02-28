@@ -1,3 +1,4 @@
+ 
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -36,61 +37,41 @@ const AuthorArticle = () => {
     }
   }, [author, slug]);
 
-  const banglaToBanglish = (text) => {
-    const mappings = {
-      "অ": "o", "আ": "a", "ই": "i", "ঈ": "i", "উ": "u", "ঊ": "u", "ঋ": "ri",
-      "এ": "e", "ঐ": "oi", "ও": "o", "ঔ": "ou",
-      "ক": "k", "খ": "kh", "গ": "g", "ঘ": "gh", "ঙ": "ng",
-      "চ": "ch", "ছ": "chh", "জ": "j", "ঝ": "jh", "ঞ": "ny",
-      "ট": "t", "ঠ": "th", "ড": "d", "ঢ": "dh", "ণ": "n",
-      "ত": "t", "থ": "th", "দ": "d", "ধ": "dh", "ন": "n",
-      "প": "p", "ফ": "ph", "ব": "b", "ভ": "bh", "ম": "m",
-      "য": "y", "র": "r", "ল": "l", "শ": "sh", "ষ": "sh", "স": "s",
-      "হ": "h", "ড়": "r", "ঢ়": "rh", "য়": "y", "ৎ": "t", "ং": "ng",
-      "ঃ": "h", "ঁ": "",
-      "া": "a", "ি": "i", "ী": "i", "ু": "u", "ূ": "u", "ৃ": "ri",
-      "ে": "e", "ৈ": "oi", "ো": "o", "ৌ": "ou", "্": "",
-      " ": " ", ".": ".", ",": ",", "?":"?", "!":"!", ":":":", ";":";",
-    };
-
-    let banglishText = "";
-    for (const char of text) {
-      if (mappings[char]) {
-        banglishText += mappings[char];
-      } else {
-        banglishText += char;
-      }
-    }
-
-    banglishText = banglishText.replace(/\s+/g, " ").trim();
-    return banglishText;
-  };
-
   const fetchArticleBySlug = async (authorName: string, articleSlug: string) => {
     try {
       console.log(`Fetching article by author: ${authorName} and slug: ${articleSlug}`);
-
+      
+      // First try to fetch all articles 
       const { data: articles, error } = await supabase
         .from("articles")
-        .select(`*, author:profiles(username)`);
+        .select(`
+          *,
+          author:profiles(username)
+        `);
 
       if (error) throw error;
+      
       if (!articles || articles.length === 0) {
         throw new Error("No articles found");
       }
+      
       console.log(`Found ${articles.length} articles in total`);
-
-      const matchingArticle = articles.find((a) => {
-        const currentSlug = banglaToBanglish(a.title).toLowerCase().replace(/[^a-z0-9]+/g, "-");
-        return currentSlug === articleSlug.toLowerCase();
+      
+      // Find the article with matching slug derived from title
+      const titleSlug = articleSlug.toLowerCase();
+      const matchingArticle = articles.find(a => {
+        const currentSlug = a.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        return currentSlug === titleSlug;
       });
 
       if (!matchingArticle) {
-        console.error("No article matches the slug:", articleSlug);
+        console.error("No article matches the slug:", titleSlug);
         throw new Error("Article not found");
       }
 
+      // Now check if author matches
       const displayedAuthor = matchingArticle.author?.username || `user_${matchingArticle.author_id.substring(0, 8)}`;
+      
       if (displayedAuthor !== authorName && authorName !== matchingArticle.author_id) {
         console.error("Author mismatch:", displayedAuthor, authorName);
         throw new Error("Author mismatch");
@@ -125,6 +106,7 @@ const AuthorArticle = () => {
 
   const toggleBookmark = async () => {
     if (!article) return;
+    
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       toast.error("Please sign in to bookmark articles");
@@ -137,6 +119,7 @@ const AuthorArticle = () => {
           .from("bookmarks")
           .delete()
           .match({ article_id: article.id, user_id: user.id });
+
         if (error) throw error;
         setIsBookmarked(false);
         toast.success("Bookmark removed");
@@ -144,6 +127,7 @@ const AuthorArticle = () => {
         const { error } = await supabase
           .from("bookmarks")
           .insert({ article_id: article.id, user_id: user.id });
+
         if (error) throw error;
         setIsBookmarked(true);
         toast.success("Article bookmarked");
@@ -206,5 +190,42 @@ const AuthorArticle = () => {
       <Header />
       <main className="container max-w-4xl py-8">
         <article className="prose lg:prose-xl mx-auto">
-          <div
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-4xl font-bold mb-0">{article?.title}</h1>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleBookmark}
+                className={isBookmarked ? "text-primary" : ""}
+              >
+                <Bookmark className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={shareArticle}>
+                <Share className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+          <div className="text-muted-foreground mb-8 flex justify-between">
+            <span>By {article.author?.username || `user_${article.author_id.substring(0, 8)}`}</span>
+            <span>{article?.created_at && new Date(article.created_at).toLocaleDateString()}</span>
+          </div>
+          {article?.thumbnail_url && (
+            <img
+              src={article.thumbnail_url}
+              alt={article.title}
+              className="w-full h-64 object-cover rounded-lg mb-8"
+            />
+          )}
+          <div 
+            className="prose dark:prose-invert"
+            dangerouslySetInnerHTML={{ __html: article?.content || "" }} 
+          />
+        </article>
+      </main>
+      <Footer />
+    </div>
+  );
+};
 
+export default AuthorArticle;
