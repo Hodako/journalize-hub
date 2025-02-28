@@ -1,4 +1,4 @@
-
+ 
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -57,10 +57,12 @@ const AuthorArticle = () => {
       
       console.log(`Found ${articles.length} articles in total`);
       
+      // Normalize the slug for comparison (encode URL-safe)
+      const titleSlug = encodeURIComponent(articleSlug.toLowerCase()).replace(/%20/g, '-');
+      
       // Find the article with matching slug derived from title
-      const titleSlug = articleSlug.toLowerCase();
       const matchingArticle = articles.find(a => {
-        const currentSlug = a.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        const currentSlug = encodeURIComponent(a.title.toLowerCase()).replace(/%20/g, '-');
         return currentSlug === titleSlug;
       });
 
@@ -229,3 +231,4 @@ const AuthorArticle = () => {
 };
 
 export default AuthorArticle;
+
