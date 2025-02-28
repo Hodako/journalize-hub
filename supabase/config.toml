@@ -3,7 +3,6 @@ project_id = "robymkbuuqottdkjrwxm"
 
 [api]
 enabled = true
-url = "https://robymkbuuqottdkjrwxm.supabase.co"
 
 [functions.chat-with-ai]
 verify_jwt = true
