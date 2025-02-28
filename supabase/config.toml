@@ -5,4 +5,4 @@ project_id = "robymkbuuqottdkjrwxm"
 enabled = true
 
 [functions.chat-with-ai]
-verify_jwt = true
+verify_jwt = false
