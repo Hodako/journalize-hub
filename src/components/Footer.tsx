@@ -63,8 +63,8 @@ export const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Contact</h3>
             <address className="text-sm text-muted-foreground not-italic">
-              <p>Email: contact@journalhub.com</p>
-              <p>Phone: (555) 123-4567</p>
+              <p>Email: info@bangujournal.com</p>
+              <p>Telegram: BanguJournal</p>
             </address>
           </div>
         </div>
@@ -72,7 +72,7 @@ export const Footer = () => {
       <div className="border-t">
         <div className="container py-6">
           <p className="text-sm text-center text-muted-foreground">
-            © 2024 JournalHub. All rights reserved.
+            © 2025 BanguJournal. All rights reserved.
           </p>
         </div>
       </div>
