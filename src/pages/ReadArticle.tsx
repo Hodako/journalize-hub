@@ -20,6 +20,9 @@ interface Article {
   thumbnail_url: string;
   author_id: string;
   created_at: string;
+  author?: {
+    username: string;
+  };
 }
 
 const ReadArticle = () => {
@@ -60,7 +63,10 @@ const ReadArticle = () => {
     try {
       const { data, error } = await supabase
         .from("articles")
-        .select("*")
+        .select(`
+          *,
+          author:profiles(username)
+        `)
         .eq("id", articleId)
         .single();
 
@@ -195,8 +201,9 @@ const ReadArticle = () => {
               </Button>
             </div>
           </div>
-          <div className="text-muted-foreground mb-8">
-            {article?.created_at && new Date(article.created_at).toLocaleDateString()}
+          <div className="text-muted-foreground mb-8 flex justify-between">
+            <span>By {article.author?.username || `user_${article.author_id.substring(0, 8)}`}</span>
+            <span>{article?.created_at && new Date(article.created_at).toLocaleDateString()}</span>
           </div>
           {article?.thumbnail_url && (
             <img

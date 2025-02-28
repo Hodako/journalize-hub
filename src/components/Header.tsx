@@ -179,6 +179,15 @@ export const Header = () => {
             />
           </div>
 
+          <Button
+            variant="outline"
+            size="icon"
+            className="transition-transform hover:scale-105"
+            onClick={() => navigate("/ai-chat")}
+          >
+            <Bot className="h-5 w-5" />
+          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="transition-transform hover:scale-105">
